@@ -108,6 +108,7 @@ async function main() {
     if (input === 'help') {
       console.log('Available commands:');
       console.log('  greet <name> - Send a greeting to the specified name');
+      console.log('  query        - Get a response from the query tool');
       console.log('  listTools    - List available tools');
       console.log('  help         - Show this help message');
       console.log('  exit, quit   - Exit the CLI');
@@ -128,7 +129,9 @@ async function main() {
         console.log('Available tools:');
         response.result.tools.forEach((tool: any) => {
           console.log(`  ${tool.name} - ${tool.description}`);
-          console.log('    Required parameters:', tool.inputSchema.required.join(', '));
+          if (tool.inputSchema && tool.inputSchema.required && tool.inputSchema.required.length > 0) {
+            console.log('    Required parameters:', tool.inputSchema.required.join(', '));
+          }
         });
       } catch (error) {
         console.error('Error listing tools:', error);
@@ -171,6 +174,38 @@ async function main() {
         }
       } catch (error) {
         console.error('Error calling greeting tool:', error);
+      }
+      rl.prompt();
+      return;
+    }
+    
+    // Handle query command
+    if (input === 'query') {
+      try {
+        const request = {
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'query',
+            arguments: {}
+          }
+        };
+        
+        const response = await sendMCPRequest(serverProcess, request);
+        if (response.result && response.result.content) {
+          response.result.content.forEach((content: any) => {
+            if (content.type === 'text') {
+              console.log(content.text);
+            }
+          });
+        } else if (response.result && response.result.result) {
+          console.log(response.result.result);
+        } else {
+          console.log('No content in response');
+        }
+      } catch (error) {
+        console.error('Error calling query tool:', error);
       }
       rl.prompt();
       return;

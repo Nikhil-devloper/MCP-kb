@@ -2,6 +2,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { greetingToolDefinition, handleGreeting } from "./tools/greeting.js";
+import { queryToolDefinition, handleQuery } from "./tools/query.js";
 
 import {
   CallToolRequestSchema,
@@ -23,16 +24,20 @@ const server = new Server(
 // 2. Define the list of tools
 server.setRequestHandler(ListToolsRequestSchema, () => {
   return {
-    tools: [greetingToolDefinition],
+    tools: [greetingToolDefinition, queryToolDefinition],
   };
 });
 
 // 3. Add tool call logic
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+  const safeArgs = args || {};
+  
   switch (name) {
     case "greeting":
-      return handleGreeting(args);
+      return handleGreeting(safeArgs);
+    case "query":
+      return handleQuery(safeArgs);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

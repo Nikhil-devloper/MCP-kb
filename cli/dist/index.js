@@ -5,7 +5,7 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 // Current directory for relative path resolution
 const __dirname = dirname(fileURLToPath(import.meta.url));
-// Path to the MCP server (update this path as needed)
+//   Path to the MCP server (update this path as needed)
 const SERVER_PATH = join(__dirname, '../../server/build/index.js');
 // Function to send MCP request and receive response
 async function sendMCPRequest(serverProcess, request) {
@@ -15,21 +15,6 @@ async function sendMCPRequest(serverProcess, request) {
             try {
                 const chunk = data.toString();
                 accumulatedData += chunk;
-                // Check if we got a greeting response
-                if (request.params.name === 'greeting' && accumulatedData.includes('Hello')) {
-                    serverProcess.stdout.removeListener('data', responseHandler);
-                    resolve({
-                        result: {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: accumulatedData.trim()
-                                }
-                            ]
-                        }
-                    });
-                    return;
-                }
                 // Try to parse JSON responses
                 try {
                     // Try to find complete JSON objects
@@ -107,6 +92,7 @@ async function main() {
         if (input === 'help') {
             console.log('Available commands:');
             console.log('  greet <name> - Send a greeting to the specified name');
+            console.log('  query        - Get a response from the query tool');
             console.log('  listTools    - List available tools');
             console.log('  help         - Show this help message');
             console.log('  exit, quit   - Exit the CLI');
@@ -125,7 +111,9 @@ async function main() {
                 console.log('Available tools:');
                 response.result.tools.forEach((tool) => {
                     console.log(`  ${tool.name} - ${tool.description}`);
-                    console.log('    Required parameters:', tool.inputSchema.required.join(', '));
+                    if (tool.inputSchema && tool.inputSchema.required && tool.inputSchema.required.length > 0) {
+                        console.log('    Required parameters:', tool.inputSchema.required.join(', '));
+                    }
                 });
             }
             catch (error) {
@@ -168,6 +156,39 @@ async function main() {
             }
             catch (error) {
                 console.error('Error calling greeting tool:', error);
+            }
+            rl.prompt();
+            return;
+        }
+        // Handle query command
+        if (input === 'query') {
+            try {
+                const request = {
+                    jsonrpc: '2.0',
+                    id: Date.now(),
+                    method: 'tools/call',
+                    params: {
+                        name: 'query',
+                        arguments: {}
+                    }
+                };
+                const response = await sendMCPRequest(serverProcess, request);
+                if (response.result && response.result.content) {
+                    response.result.content.forEach((content) => {
+                        if (content.type === 'text') {
+                            console.log(content.text);
+                        }
+                    });
+                }
+                else if (response.result && response.result.result) {
+                    console.log(response.result.result);
+                }
+                else {
+                    console.log('No content in response');
+                }
+            }
+            catch (error) {
+                console.error('Error calling query tool:', error);
             }
             rl.prompt();
             return;
