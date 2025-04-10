@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 // Current directory for relative path resolution
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Path to the MCP server (update this path as needed)
+//   Path to the MCP server (update this path as needed)
 const SERVER_PATH = join(__dirname, '../../server/build/index.js');
 
 // Function to send MCP request and receive response
@@ -20,22 +20,6 @@ async function sendMCPRequest(serverProcess: any, request: any): Promise<any> {
       try {
         const chunk = data.toString();
         accumulatedData += chunk;
-        
-        // Check if we got a greeting response
-        if (request.params.name === 'greeting' && accumulatedData.includes('Hello')) {
-          serverProcess.stdout.removeListener('data', responseHandler);
-          resolve({
-            result: {
-              content: [
-                {
-                  type: 'text',
-                  text: accumulatedData.trim()
-                }
-              ]
-            }
-          });
-          return;
-        }
         
         // Try to parse JSON responses
         try {
