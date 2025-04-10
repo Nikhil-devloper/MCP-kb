@@ -92,7 +92,7 @@ async function main() {
         if (input === 'help') {
             console.log('Available commands:');
             console.log('  greet <name> - Send a greeting to the specified name');
-            console.log('  query        - Get a response from the query tool');
+            console.log('  query <question> - Ask a question about documents in the knowledge base');
             console.log('  listTools    - List available tools');
             console.log('  help         - Show this help message');
             console.log('  exit, quit   - Exit the CLI');
@@ -161,7 +161,13 @@ async function main() {
             return;
         }
         // Handle query command
-        if (input === 'query') {
+        if (input.startsWith('query ')) {
+            const question = input.substring(6).trim();
+            if (!question) {
+                console.log('Please provide a question. Usage: query <question>');
+                rl.prompt();
+                return;
+            }
             try {
                 const request = {
                     jsonrpc: '2.0',
@@ -169,7 +175,9 @@ async function main() {
                     method: 'tools/call',
                     params: {
                         name: 'query',
-                        arguments: {}
+                        arguments: {
+                            question
+                        }
                     }
                 };
                 const response = await sendMCPRequest(serverProcess, request);

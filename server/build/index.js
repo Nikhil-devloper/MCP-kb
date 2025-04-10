@@ -2,7 +2,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { greetingToolDefinition, handleGreeting } from "./tools/greeting.js";
-import { queryToolDefinition, handleQuery } from "./tools/query.js";
+import { enhancedQueryToolDefinition, handleEnhancedQuery } from "./tools/enhanced-query.js";
 import { CallToolRequestSchema, ListToolsRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
 // 1. Create MCP server instance
 const server = new Server({
@@ -16,7 +16,7 @@ const server = new Server({
 // 2. Define the list of tools
 server.setRequestHandler(ListToolsRequestSchema, () => {
     return {
-        tools: [greetingToolDefinition, queryToolDefinition],
+        tools: [greetingToolDefinition, enhancedQueryToolDefinition],
     };
 });
 // 3. Add tool call logic
@@ -27,7 +27,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         case "greeting":
             return handleGreeting(safeArgs);
         case "query":
-            return handleQuery(safeArgs);
+            return handleEnhancedQuery(safeArgs);
         default:
             throw new Error(`Unknown tool: ${name}`);
     }
