@@ -1,8 +1,8 @@
 import axios from "axios";
 // Define the tool schema
 export const enhancedQueryToolDefinition = {
-    name: "query",
-    description: "Ask questions about documents stored in the knowledge base",
+    name: "Zodi",
+    description: "Your friendly buddy that answers questions about documents stored in the knowledge base",
     inputSchema: {
         type: "object",
         properties: {
@@ -80,17 +80,19 @@ async function callCursorAPI(question, context) {
         return response.data.choices[0].message.content;
         */
         // For now, we'll return a simulated response based on the context
-        return `Based on the documents in the knowledge base, here's what I found: 
+        return `Hey there, buddy! Based on the documents in the knowledge base, here's what I found: 
     
 The answer to your question "${question}" is that the documents contain information about the knowledge base API, which is a serverless API for managing documents. It uses Node.js, TypeScript, Express, and AWS DynamoDB.
 
 The API has endpoints for uploading documents, retrieving documents by ID, and listing all documents. Documents are stored in DynamoDB with a schema that includes id, title, content, type, tags, and timestamps.
 
-For production use with larger documents, it's recommended to store document content in S3 and keep only metadata in DynamoDB.`;
+For production use with larger documents, it's recommended to store document content in S3 and keep only metadata in DynamoDB.
+
+Is there anything else you'd like to know, buddy?`;
     }
     catch (error) {
         console.error("Error calling Cursor API:", error);
-        return "I'm sorry, I couldn't process your question at this time.";
+        return "I'm sorry, buddy, I couldn't process your question at this time.";
     }
 }
 // Define the handler function
@@ -98,7 +100,7 @@ export async function handleEnhancedQuery(args) {
     const { question } = args;
     if (!question || typeof question !== "string") {
         return {
-            result: "Please provide a valid question.",
+            result: "Please provide a valid question, buddy.",
         };
     }
     try {
@@ -115,7 +117,7 @@ export async function handleEnhancedQuery(args) {
     catch (error) {
         console.error("Error in enhanced query handler:", error);
         return {
-            result: "An error occurred while processing your question.",
+            result: "An error occurred while processing your question, buddy.",
         };
     }
 }

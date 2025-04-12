@@ -36,7 +36,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (name) {
     case "greeting":
       return handleGreeting(safeArgs);
-    case "query":
+    case "Zodi":
       return handleEnhancedQuery(safeArgs);
     default:
       throw new Error(`Unknown tool: ${name}`);

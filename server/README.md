@@ -1,11 +1,11 @@
-# MCP Server with Enhanced Query Tool
+# MCP Server with Zodi - Your Knowledge Base Buddy
 
-This server implements the Model Context Protocol (MCP) with an enhanced query tool that can answer questions about documents stored in a DynamoDB knowledge base.
+This server implements the Model Context Protocol (MCP) with Zodi, your friendly buddy that can answer questions about documents stored in a DynamoDB knowledge base.
 
 ## Features
 
 - **Greeting Tool**: A simple tool that returns a greeting with the provided name.
-- **Enhanced Query Tool**: A tool that connects to a DynamoDB knowledge base and uses Cursor's LLM API to answer questions about the documents.
+- **Zodi**: Your friendly buddy that connects to a DynamoDB knowledge base and uses Cursor's LLM API to answer questions about the documents.
 
 ## Setup
 
@@ -26,7 +26,7 @@ This server implements the Model Context Protocol (MCP) with an enhanced query t
 
 ## Cursor API Integration
 
-The enhanced query tool uses Cursor's API to answer questions about documents. To set up the integration:
+Zodi uses Cursor's API to answer questions about documents. To set up the integration:
 
 1. Get your Cursor API key from your Cursor account.
 2. Set the API key as an environment variable:
@@ -37,7 +37,7 @@ The enhanced query tool uses Cursor's API to answer questions about documents. T
 
 ## Knowledge Base API
 
-The enhanced query tool connects to a knowledge base API that stores documents in DynamoDB. The API has the following endpoints:
+Zodi connects to a knowledge base API that stores documents in DynamoDB. The API has the following endpoints:
 
 - `GET /documents`: List all documents
 - `GET /documents/{documentId}`: Get a document by ID
@@ -50,7 +50,7 @@ The API base URL is configured in `src/tools/enhanced-query.ts`.
 The CLI provides a simple interface to interact with the MCP server:
 
 - `greet <name>`: Send a greeting to the specified name
-- `query <question>`: Ask a question about documents in the knowledge base
+- `zodi <question>`: Ask Zodi, your friendly buddy, a question about documents
 - `listTools`: List available tools
 - `help`: Show help message
 - `exit`, `quit`: Exit the CLI
@@ -58,19 +58,21 @@ The CLI provides a simple interface to interact with the MCP server:
 ## Example Usage
 
 ```
-MCP> query What is the knowledge base API?
-Based on the documents in the knowledge base, here's what I found:
+MCP> zodi What is the knowledge base API?
+Hey there, buddy! Based on the documents in the knowledge base, here's what I found:
 
 The answer to your question "What is the knowledge base API?" is that the documents contain information about the knowledge base API, which is a serverless API for managing documents. It uses Node.js, TypeScript, Express, and AWS DynamoDB.
 
 The API has endpoints for uploading documents, retrieving documents by ID, and listing all documents. Documents are stored in DynamoDB with a schema that includes id, title, content, type, tags, and timestamps.
 
 For production use with larger documents, it's recommended to store document content in S3 and keep only metadata in DynamoDB.
+
+Is there anything else you'd like to know, buddy?
 ```
 
 ## Implementation Details
 
-The enhanced query tool works as follows:
+Zodi works as follows:
 
 1. Fetches documents from the knowledge base API
 2. Prepares a context from the documents

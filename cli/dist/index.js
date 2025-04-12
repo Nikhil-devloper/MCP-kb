@@ -92,7 +92,7 @@ async function main() {
         if (input === 'help') {
             console.log('Available commands:');
             console.log('  greet <name> - Send a greeting to the specified name');
-            console.log('  query <question> - Ask a question about documents in the knowledge base');
+            console.log('  zodi <question> - Ask Zodi, your friendly buddy, a question about documents');
             console.log('  listTools    - List available tools');
             console.log('  help         - Show this help message');
             console.log('  exit, quit   - Exit the CLI');
@@ -160,11 +160,11 @@ async function main() {
             rl.prompt();
             return;
         }
-        // Handle query command
-        if (input.startsWith('query ')) {
-            const question = input.substring(6).trim();
+        // Handle Zodi command
+        if (input.startsWith('zodi ')) {
+            const question = input.substring(5).trim();
             if (!question) {
-                console.log('Please provide a question. Usage: query <question>');
+                console.log('Please provide a question. Usage: zodi <question>');
                 rl.prompt();
                 return;
             }
@@ -174,7 +174,7 @@ async function main() {
                     id: Date.now(),
                     method: 'tools/call',
                     params: {
-                        name: 'query',
+                        name: 'Zodi',
                         arguments: {
                             question
                         }
@@ -196,7 +196,7 @@ async function main() {
                 }
             }
             catch (error) {
-                console.error('Error calling query tool:', error);
+                console.error('Error calling Zodi:', error);
             }
             rl.prompt();
             return;
