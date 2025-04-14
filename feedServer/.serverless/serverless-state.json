@@ -10,7 +10,9 @@
       "stage": "dev",
       "region": "ap-south-1",
       "environment": {
-        "DOCUMENTS_TABLE": "knowledge-base-api-dev-documents"
+        "DOCUMENTS_TABLE": "knowledge-base-api-dev-documents",
+        "OPENSEARCH_DOMAIN_ENDPOINT": "https://search-knowledgebase-search-new-ehotyrromqfzkijvbsnf3kzini.aos.ap-south-1.on.aws",
+        "OPENSEARCH_ENABLED": "true"
       },
       "iamRoleStatements": [
         {
@@ -19,7 +21,11 @@
             "dynamodb:PutItem",
             "dynamodb:GetItem",
             "dynamodb:Scan",
-            "dynamodb:Query"
+            "dynamodb:Query",
+            "dynamodb:GetRecords",
+            "dynamodb:GetShardIterator",
+            "dynamodb:DescribeStream",
+            "dynamodb:ListStreams"
           ],
           "Resource": [
             {
@@ -27,6 +33,64 @@
                 "DocumentsTable",
                 "Arn"
               ]
+            },
+            {
+              "Fn::Join": [
+                "",
+                [
+                  {
+                    "Fn::GetAtt": [
+                      "DocumentsTable",
+                      "Arn"
+                    ]
+                  },
+                  "/stream/*"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "bedrock:InvokeModel"
+          ],
+          "Resource": "arn:aws:bedrock:ap-south-1::foundation-model/amazon.titan-embed-text-v2:0"
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "es:ESHttpPost",
+            "es:ESHttpPut",
+            "es:ESHttpGet",
+            "es:ESHttpHead",
+            "es:ESHttpDelete",
+            "aoss:APIAccessAll",
+            "es:ESHttpPatch",
+            "es:DescribeDomain",
+            "es:ListDomainNames",
+            "es:DescribeDomainConfig",
+            "es:DescribeDomains",
+            "opensearch:ESHttpGet",
+            "opensearch:ESHttpPost",
+            "opensearch:ESHttpPut",
+            "opensearch:ESHttpDelete",
+            "opensearch:ESHttpHead",
+            "opensearch:ESHttpPatch",
+            "opensearch:DescribeDomain",
+            "opensearch:DescribeDomains",
+            "opensearch:DescribeDomainConfig",
+            "opensearch:ListDomainNames"
+          ],
+          "Resource": [
+            {
+              "Fn::Sub": "arn:aws:es:ap-south-1:${AWS::AccountId}:domain/knowledgebase-search-new/*"
+            },
+            {
+              "Fn::Sub": "arn:aws:aoss:ap-south-1:${AWS::AccountId}:collection/knowledgebase-search-new*"
+            },
+            {
+              "Fn::Sub": "arn:aws:opensearch:ap-south-1:${AWS::AccountId}:domain/knowledgebase-search-new/*"
             }
           ]
         }
@@ -111,6 +175,12 @@
               "LogGroupName": "/aws/lambda/knowledge-base-api-dev-api"
             }
           },
+          "DocumentIngestionLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/knowledge-base-api-dev-documentIngestion"
+            }
+          },
           "IamRoleLambdaExecution": {
             "Type": "AWS::IAM::Role",
             "Properties": {
@@ -171,6 +241,29 @@
                       },
                       {
                         "$ref": "$[\"service\"][\"provider\"][\"iamRoleStatements\"][0]"
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iamRoleStatements\"][1]"
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iamRoleStatements\"][2]"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "dynamodb:GetRecords",
+                          "dynamodb:GetShardIterator",
+                          "dynamodb:DescribeStream",
+                          "dynamodb:ListStreams"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::GetAtt": [
+                              "DocumentsTable",
+                              "StreamArn"
+                            ]
+                          }
+                        ]
                       }
                     ]
                   }
@@ -199,7 +292,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/knowledge-base-api/dev/1743867092261-2025-04-05T15:31:32.261Z/knowledge-base-api.zip"
+                "S3Key": "serverless/knowledge-base-api/dev/1744638121357-2025-04-14T13:42:01.357Z/api.zip"
               },
               "Handler": "dist/handler.handler",
               "Runtime": "nodejs18.x",
@@ -208,7 +301,9 @@
               "Timeout": 6,
               "Environment": {
                 "Variables": {
-                  "DOCUMENTS_TABLE": "knowledge-base-api-dev-documents"
+                  "DOCUMENTS_TABLE": "knowledge-base-api-dev-documents",
+                  "OPENSEARCH_DOMAIN_ENDPOINT": "https://search-knowledgebase-search-new-ehotyrromqfzkijvbsnf3kzini.aos.ap-south-1.on.aws",
+                  "OPENSEARCH_ENABLED": "true"
                 }
               },
               "Role": {
@@ -222,14 +317,56 @@
               "ApiLogGroup"
             ]
           },
-          "ApiLambdaVersionsUMHlj91gxd9LtPK0xOwgIHBbwY7Qozw64ulW38yM4": {
+          "DocumentIngestionLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/knowledge-base-api/dev/1744638121357-2025-04-14T13:42:01.357Z/documentIngestion.zip"
+              },
+              "Handler": "dist/lambdas/documentIngestion.handler",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "knowledge-base-api-dev-documentIngestion",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DOCUMENTS_TABLE": "knowledge-base-api-dev-documents",
+                  "OPENSEARCH_DOMAIN_ENDPOINT": "https://search-knowledgebase-search-new-ehotyrromqfzkijvbsnf3kzini.aos.ap-south-1.on.aws",
+                  "OPENSEARCH_ENABLED": "true"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "DocumentIngestionLogGroup"
+            ]
+          },
+          "ApiLambdaVersionZ0KK7wCviF8nLd6vKAWsTJu3b2kUy01VqUZlC8gIY": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ApiLambdaFunction"
               },
-              "CodeSha256": "FgaTYL2NMYqjkTM6yV6y529k7b0TNlGbB0jQVmNXGeU="
+              "CodeSha256": "4PE1SWY0UegiTHS5enAfaQ853HnMa8/oXCTRLYmgTRs="
+            }
+          },
+          "DocumentIngestionLambdaVersionSonslGQJI09wofUo2rywJcTFy5UDzlzgJDp28NtNY": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "DocumentIngestionLambdaFunction"
+              },
+              "CodeSha256": "4PE1SWY0UegiTHS5enAfaQ853HnMa8/oXCTRLYmgTRs="
             }
           },
           "ApiGatewayRestApi": {
@@ -447,7 +584,7 @@
               "ApiLambdaPermissionApiGateway"
             ]
           },
-          "ApiGatewayDeployment1743867087957": {
+          "ApiGatewayDeployment1744638112588": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -499,6 +636,29 @@
               }
             }
           },
+          "DocumentIngestionEventSourceMappingDynamodbDocumentsTable": {
+            "Type": "AWS::Lambda::EventSourceMapping",
+            "DependsOn": [
+              "IamRoleLambdaExecution"
+            ],
+            "Properties": {
+              "BatchSize": 10,
+              "Enabled": true,
+              "EventSourceArn": {
+                "Fn::GetAtt": [
+                  "DocumentsTable",
+                  "StreamArn"
+                ]
+              },
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "DocumentIngestionLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "StartingPosition": "LATEST"
+            }
+          },
           "DocumentsTable": {
             "Type": "AWS::DynamoDB::Table",
             "Properties": {
@@ -515,7 +675,10 @@
                   "KeyType": "HASH"
                 }
               ],
-              "BillingMode": "PAY_PER_REQUEST"
+              "BillingMode": "PAY_PER_REQUEST",
+              "StreamSpecification": {
+                "StreamViewType": "NEW_IMAGE"
+              }
             }
           }
         },
@@ -531,10 +694,19 @@
           "ApiLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ApiLambdaVersionsUMHlj91gxd9LtPK0xOwgIHBbwY7Qozw64ulW38yM4"
+              "Ref": "ApiLambdaVersionZ0KK7wCviF8nLd6vKAWsTJu3b2kUy01VqUZlC8gIY"
             },
             "Export": {
               "Name": "sls-knowledge-base-api-dev-ApiLambdaFunctionQualifiedArn"
+            }
+          },
+          "DocumentIngestionLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "DocumentIngestionLambdaVersionSonslGQJI09wofUo2rywJcTFy5UDzlzgJDp28NtNY"
+            },
+            "Export": {
+              "Name": "sls-knowledge-base-api-dev-DocumentIngestionLambdaFunctionQualifiedArn"
             }
           },
           "ServiceEndpoint": {
@@ -649,6 +821,9 @@
       },
       "vpc": {}
     },
+    "custom": {
+      "opensearchDomainName": "knowledgebase-search-new"
+    },
     "plugins": [
       "serverless-offline"
     ],
@@ -656,6 +831,14 @@
     "functions": {
       "api": {
         "handler": "dist/handler.handler",
+        "package": {
+          "patterns": [
+            "!**",
+            "dist/**",
+            "node_modules/**"
+          ],
+          "artifact": "/Users/dev-nik-zoro/Documents/MCP/mcp-made-simple/pro/feedServer/.serverless/api.zip"
+        },
         "events": [
           {
             "http": {
@@ -707,12 +890,41 @@
           }
         ],
         "name": "knowledge-base-api-dev-api",
-        "package": {},
         "memory": 1024,
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "ApiLambdaVersionsUMHlj91gxd9LtPK0xOwgIHBbwY7Qozw64ulW38yM4"
+        "versionLogicalId": "ApiLambdaVersionZ0KK7wCviF8nLd6vKAWsTJu3b2kUy01VqUZlC8gIY"
+      },
+      "documentIngestion": {
+        "handler": "dist/lambdas/documentIngestion.handler",
+        "package": {
+          "patterns": [
+            "!**",
+            "dist/**",
+            "node_modules/**"
+          ],
+          "artifact": "/Users/dev-nik-zoro/Documents/MCP/mcp-made-simple/pro/feedServer/.serverless/documentIngestion.zip"
+        },
+        "events": [
+          {
+            "stream": {
+              "type": "dynamodb",
+              "arn": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"IamRoleLambdaExecution\"][\"Properties\"][\"Policies\"][0][\"PolicyDocument\"][\"Statement\"][5][\"Resource\"][0]"
+              },
+              "batchSize": 10,
+              "startingPosition": "LATEST",
+              "enabled": true
+            }
+          }
+        ],
+        "name": "knowledge-base-api-dev-documentIngestion",
+        "memory": 1024,
+        "timeout": 6,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "DocumentIngestionLambdaVersionSonslGQJI09wofUo2rywJcTFy5UDzlzgJDp28NtNY"
       }
     },
     "resources": {
@@ -733,7 +945,10 @@
                 "KeyType": "HASH"
               }
             ],
-            "BillingMode": "PAY_PER_REQUEST"
+            "BillingMode": "PAY_PER_REQUEST",
+            "StreamSpecification": {
+              "StreamViewType": "NEW_IMAGE"
+            }
           }
         }
       },
@@ -746,18 +961,14 @@
       "provider": {
         "$ref": "$[\"service\"][\"provider\"]"
       },
+      "custom": {
+        "$ref": "$[\"service\"][\"custom\"]"
+      },
       "package": {
-        "patterns": [
-          "!node_modules/.bin/**",
-          "!node_modules/@types/**",
-          "!node_modules/typescript/**",
-          "node_modules/**",
-          "!src/**",
-          "dist/**"
-        ],
+        "individually": true,
+        "excludeDevDependencies": true,
         "artifactsS3KeyDirname": "serverless/knowledge-base-api/dev/code-artifacts",
-        "artifact": "/Users/dev-nik-zoro/Documents/MCP/mcp-made-simple/pro/feedServer/.serverless/knowledge-base-api.zip",
-        "artifactDirectoryName": "serverless/knowledge-base-api/dev/1743867092261-2025-04-05T15:31:32.261Z"
+        "artifactDirectoryName": "serverless/knowledge-base-api/dev/1744638121357-2025-04-14T13:42:01.357Z"
       },
       "functions": {
         "$ref": "$[\"service\"][\"functions\"]"
@@ -770,11 +981,11 @@
       }
     },
     "layers": {},
-    "isDashboardMonitoringPreconfigured": false,
-    "artifact": "/Users/dev-nik-zoro/Documents/MCP/mcp-made-simple/pro/feedServer/.serverless/knowledge-base-api.zip"
+    "isDashboardMonitoringPreconfigured": false
   },
   "package": {
-    "artifactDirectoryName": "serverless/knowledge-base-api/dev/1743867092261-2025-04-05T15:31:32.261Z",
-    "artifact": "knowledge-base-api.zip"
+    "individually": true,
+    "artifactDirectoryName": "serverless/knowledge-base-api/dev/1744638121357-2025-04-14T13:42:01.357Z",
+    "artifact": ""
   }
 }

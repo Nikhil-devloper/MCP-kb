@@ -1,0 +1,36 @@
+{
+  "Records": [
+    {
+      "eventID": "1",
+      "eventVersion": "1.0",
+      "dynamodb": {
+        "Keys": {
+          "id": {
+            "S": "test-document-123"
+          }
+        },
+        "NewImage": {
+          "id": {
+            "S": "test-document-123"
+          },
+          "title": {
+            "S": "Test Document"
+          },
+          "content": {
+            "S": "This is a test document for OpenSearch indexing."
+          },
+          "createdAt": {
+            "S": "2025-04-14T13:00:00.000Z"
+          }
+        },
+        "StreamViewType": "NEW_IMAGE",
+        "SequenceNumber": "111",
+        "SizeBytes": 26
+      },
+      "awsRegion": "ap-south-1",
+      "eventName": "INSERT",
+      "eventSourceARN": "arn:aws:dynamodb:ap-south-1:123456789012:table/knowledge-base-api-dev-documents/stream/2025-04-14T13:00:00.000",
+      "eventSource": "aws:dynamodb"
+    }
+  ]
+} 

@@ -7,6 +7,8 @@ provider:
   region: ap-south-1
   environment:
     DOCUMENTS_TABLE: ${self:service}-${self:provider.stage}-documents
+    OPENSEARCH_DOMAIN_ENDPOINT: ${env:OPENSEARCH_ENDPOINT, 'https://search-knowledgebase-search-new-ehotyrromqfzkijvbsnf3kzini.aos.ap-south-1.on.aws'}
+    OPENSEARCH_ENABLED: ${env:OPENSEARCH_ENABLED, 'true'}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -14,21 +16,61 @@ provider:
         - dynamodb:GetItem
         - dynamodb:Scan
         - dynamodb:Query
+        - dynamodb:GetRecords
+        - dynamodb:GetShardIterator
+        - dynamodb:DescribeStream
+        - dynamodb:ListStreams
       Resource: 
         - "Fn::GetAtt": [ DocumentsTable, Arn ]
+        - !Join ['', [!GetAtt DocumentsTable.Arn, '/stream/*']]
+    - Effect: Allow
+      Action:
+        - bedrock:InvokeModel
+      Resource: 
+        - "arn:aws:bedrock:ap-south-1::foundation-model/amazon.titan-embed-text-v2:0"
+    - Effect: Allow
+      Action:
+        - es:ESHttpPost
+        - es:ESHttpPut
+        - es:ESHttpGet
+        - es:ESHttpHead
+        - es:ESHttpDelete
+        - aoss:APIAccessAll
+        - es:ESHttpPatch
+        - es:DescribeDomain
+        - es:ListDomainNames
+        - es:DescribeDomainConfig
+        - es:DescribeDomains
+        - opensearch:ESHttpGet
+        - opensearch:ESHttpPost
+        - opensearch:ESHttpPut
+        - opensearch:ESHttpDelete
+        - opensearch:ESHttpHead
+        - opensearch:ESHttpPatch
+        - opensearch:DescribeDomain
+        - opensearch:DescribeDomains
+        - opensearch:DescribeDomainConfig
+        - opensearch:ListDomainNames
+      Resource: 
+        - !Sub "arn:aws:es:${self:provider.region}:${AWS::AccountId}:domain/${self:custom.opensearchDomainName}/*"
+        - !Sub "arn:aws:aoss:${self:provider.region}:${AWS::AccountId}:collection/${self:custom.opensearchDomainName}*"
+        - !Sub "arn:aws:opensearch:${self:provider.region}:${AWS::AccountId}:domain/${self:custom.opensearchDomainName}/*"
+
+custom:
+  opensearchDomainName: knowledgebase-search-new
 
 package:
-  patterns:
-    - '!node_modules/.bin/**'
-    - '!node_modules/@types/**'
-    - '!node_modules/typescript/**'
-    - 'node_modules/**'
-    - '!src/**'
-    - 'dist/**'
+  individually: true
+  excludeDevDependencies: true
 
 functions:
   api:
     handler: dist/handler.handler
+    package:
+      patterns:
+        - '!**'
+        - 'dist/**'
+        - 'node_modules/**'
     events:
       - http:
           path: /
@@ -38,6 +80,21 @@ functions:
           path: /{proxy+}
           method: ANY
           cors: true
+  
+  documentIngestion:
+    handler: dist/lambdas/documentIngestion.handler
+    package:
+      patterns:
+        - '!**'
+        - 'dist/**'
+        - 'node_modules/**'
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt DocumentsTable.StreamArn
+          batchSize: 10
+          startingPosition: LATEST
+          enabled: true
 
 resources:
   Resources:
@@ -52,6 +109,8 @@ resources:
           - AttributeName: id
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
 
 plugins:
   - serverless-offline 

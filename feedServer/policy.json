@@ -1,0 +1,26 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::010461912927:role/knowledge-base-api-dev-ap-south-1-lambdaRole"
+      },
+      "Action": "es:*",
+      "Resource": "arn:aws:es:ap-south-1:010461912927:domain/knowledgebase-search/*"
+    },
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "*"
+      },
+      "Action": "es:*",
+      "Resource": "arn:aws:es:ap-south-1:010461912927:domain/knowledgebase-search/*",
+      "Condition": {
+        "IpAddress": {
+          "aws:SourceIp": "0.0.0.0/0"
+        }
+      }
+    }
+  ]
+} 
