@@ -28,7 +28,7 @@ export const enhancedQueryToolDefinition = {
 const API_BASE_URL = "https://fedavetw0i.execute-api.ap-south-1.amazonaws.com/dev";
 // Question processor lambda URL - this will be the endpoint from serverless deployment
 const QUESTION_PROCESSOR_URL = process.env.QUESTION_PROCESSOR_URL || `${API_BASE_URL}/question`;
-// Function to process a question and get relevant documents using the question processor lambda
+// Function to process a question and get answer using the question processor lambda
 async function processQuestion(question) {
     try {
         console.log(`Processing question via lambda: ${question}`);
@@ -36,22 +36,26 @@ async function processQuestion(question) {
         const response = await axios.post(QUESTION_PROCESSOR_URL, {
             question: question
         });
-        // Extract the relevant documents from the response
-        const { relevantDocuments } = response.data;
-        console.log(`Received ${relevantDocuments?.length || 0} relevant documents`);
+        // Extract the answer and relevant documents from the response
+        const { answer, relevantDocuments } = response.data;
+        console.log(`Received ${relevantDocuments?.length || 0} relevant documents and answer`);
         // Filter out the embedding array to avoid showing random numbers in the output
         const cleanedDocuments = relevantDocuments?.map((doc) => {
             // Create a new object without the embedding field
             const { embedding, ...cleanDoc } = doc;
             return cleanDoc;
         }) || [];
-        return cleanedDocuments;
+        return { answer, relevantDocuments: cleanedDocuments };
     }
     catch (error) {
         console.error("Error processing question with lambda:", error);
         // Fallback to fetching all documents if the question processor fails
         console.log("Falling back to fetching all documents");
-        return await fetchAllDocuments();
+        const documents = await fetchAllDocuments();
+        return {
+            answer: "Sorry, I couldn't process your question at this time. Here is a list of documents that might help.",
+            relevantDocuments: documents
+        };
     }
 }
 // Fallback function to fetch all documents from the knowledge base
@@ -87,11 +91,11 @@ async function callCursorAPI(question, context) {
         console.log(`Context provided: ${context.substring(0, 100)}...`);
         // Directly call processQuestion to get documents for this question
         const directDocuments = await processQuestion(question);
-        console.log(`Direct call to processQuestion returned ${directDocuments.length} documents`);
+        console.log(`Direct call to processQuestion returned ${directDocuments.relevantDocuments.length} documents`);
         // Log document IDs for debugging
-        if (directDocuments.length > 0) {
+        if (directDocuments.relevantDocuments.length > 0) {
             console.log("Document IDs retrieved:");
-            directDocuments.forEach((doc, idx) => {
+            directDocuments.relevantDocuments.forEach((doc, idx) => {
                 console.log(`[${idx}] ID: ${doc.id}, Title: ${doc.title}`);
             });
         }
@@ -100,9 +104,9 @@ async function callCursorAPI(question, context) {
         }
         // For now, we'll return a simulated response based on the context and direct results
         let responseText = `Hey there, buddy! Based on the documents in the knowledge base, here's what I found:\n\n`;
-        if (directDocuments.length > 0) {
-            responseText += `I found ${directDocuments.length} relevant documents about the Knowledge Base API:\n\n`;
-            directDocuments.forEach((doc, idx) => {
+        if (directDocuments.relevantDocuments.length > 0) {
+            responseText += `I found ${directDocuments.relevantDocuments.length} relevant documents about the Knowledge Base API:\n\n`;
+            directDocuments.relevantDocuments.forEach((doc, idx) => {
                 responseText += `[${idx + 1}] "${doc.title}" (ID: ${doc.id})\n`;
                 // Extract the most relevant part about the Knowledge Base API (first 200 chars)
                 const contentPreview = doc.content.substring(0, 200);
@@ -130,14 +134,31 @@ export async function handleEnhancedQuery(args) {
         };
     }
     try {
-        // Process the question using the question processor lambda to get relevant documents
-        const relevantDocuments = await processQuestion(question);
-        // Prepare context from the relevant documents
-        const context = prepareContext(relevantDocuments);
-        // Call the Cursor API with the question and context
-        const answer = await callCursorAPI(question, context);
+        // Process the question using the question processor lambda to get relevant documents and answer
+        const { answer, relevantDocuments } = await processQuestion(question);
+        // If the answer is available, return it
+        if (answer) {
+            return {
+                result: answer,
+            };
+        }
+        // Fallback to old behavior if no answer is available
+        let responseText = `Hey there, buddy! Based on the documents in the knowledge base, here's what I found:\n\n`;
+        if (relevantDocuments.length > 0) {
+            responseText += `I found ${relevantDocuments.length} relevant documents about your question:\n\n`;
+            relevantDocuments.forEach((doc, idx) => {
+                responseText += `[${idx + 1}] "${doc.title}" (ID: ${doc.id})\n`;
+                // Extract the most relevant part (first 200 chars)
+                const contentPreview = doc.content.substring(0, 200);
+                responseText += `Preview: ${contentPreview}...\n\n`;
+            });
+        }
+        else {
+            responseText += `I couldn't find specific documents about your question. Please try a different query or check if documents have been uploaded to the knowledge base.\n\n`;
+        }
+        responseText += `Is there anything else you'd like to know about, buddy?`;
         return {
-            result: answer,
+            result: responseText,
         };
     }
     catch (error) {
