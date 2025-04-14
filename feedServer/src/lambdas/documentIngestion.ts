@@ -94,6 +94,91 @@ async function generateEmbedding(text: string): Promise<number[]> {
   return placeholderEmbedding;
 }
 
+// Function to store document in OpenSearch
+async function storeInOpenSearch(document: DocumentWithEmbedding): Promise<void> {
+  // Skip if OpenSearch is not enabled
+  if (!OPENSEARCH_ENABLED || !openSearchClient) {
+    console.log('OpenSearch is not enabled, skipping storage');
+    return;
+  }
+
+  try {
+    console.log(`Attempting direct indexing of document ${document.id} to OpenSearch...`);
+    
+    // Check if index exists, create it if it doesn't
+    try {
+      const indexExists = await openSearchClient.indices.exists({
+        index: 'documents'
+      });
+      
+      if (!indexExists.body) {
+        console.log('Creating documents index with proper mappings...');
+        // Use raw body to avoid TypeScript issues with dense_vector type
+        await openSearchClient.transport.request({
+          method: 'PUT',
+          path: '/documents',
+          body: {
+            mappings: {
+              properties: {
+                embedding: { 
+                  type: 'dense_vector',
+                  dims: 512
+                },
+                content: { type: 'text' },
+                title: { type: 'text' }
+              }
+            }
+          }
+        });
+        console.log('Successfully created documents index with vector mapping');
+      }
+    } catch (indexError) {
+      console.error('Error checking or creating index:', indexError);
+      // Try to create the index anyway in case it doesn't exist
+      try {
+        // Use raw body to avoid TypeScript issues with dense_vector type
+        await openSearchClient.transport.request({
+          method: 'PUT',
+          path: '/documents',
+          body: {
+            mappings: {
+              properties: {
+                embedding: { 
+                  type: 'dense_vector',
+                  dims: 512
+                },
+                content: { type: 'text' },
+                title: { type: 'text' }
+              }
+            }
+          }
+        });
+      } catch (createError: any) {
+        // Ignore resource_already_exists_exception
+        if (!createError.message?.includes('resource_already_exists_exception')) {
+          console.error('Failed to create index:', createError);
+        }
+      }
+    }
+    
+    // Skip the index check and simply try to index the document directly
+    const response = await openSearchClient.index({
+      index: 'documents',
+      id: document.id,
+      body: document,
+      refresh: true
+    });
+    
+    console.log(`Successfully indexed document ${document.id} to OpenSearch:`, JSON.stringify(response));
+  } catch (error: any) {
+    console.error('Error indexing to OpenSearch:', error);
+    
+    // Try the direct HTTP approach as a fallback
+    console.log('Trying direct HTTP approach as a fallback...');
+    await directOpenSearchIndex(document);
+  }
+}
+
 // Alternative direct HTTP approach to store in OpenSearch
 async function directOpenSearchIndex(document: DocumentWithEmbedding): Promise<void> {
   if (!OPENSEARCH_ENABLED) {
@@ -176,7 +261,10 @@ async function directOpenSearchIndex(document: DocumentWithEmbedding): Promise<v
         body: JSON.stringify({
           mappings: {
             properties: {
-              embedding: { type: 'float' },
+              embedding: { 
+                type: 'dense_vector',
+                dims: 512
+              },
               content: { type: 'text' },
               title: { type: 'text' }
             }
@@ -369,65 +457,6 @@ async function verifyDocumentIndexed(documentId: string, parsedUrl: URL, credent
     
     req.end();
   });
-}
-
-// Function to store document in OpenSearch
-async function storeInOpenSearch(document: DocumentWithEmbedding): Promise<void> {
-  // Skip if OpenSearch is not enabled
-  if (!OPENSEARCH_ENABLED || !openSearchClient) {
-    console.log('OpenSearch is not enabled, skipping storage');
-    return;
-  }
-
-  try {
-    console.log(`Attempting direct indexing of document ${document.id} to OpenSearch...`);
-    
-    // Skip the index check and simply try to index the document directly
-    const response = await openSearchClient.index({
-      index: 'documents',
-      id: document.id,
-      body: document,
-      refresh: true
-    });
-    
-    console.log(`Successfully indexed document ${document.id} to OpenSearch:`, JSON.stringify(response));
-  } catch (error: any) {
-    console.error('Error indexing to OpenSearch:', error);
-    
-    // Try a basic index creation if the index doesn't exist
-    if (error.meta?.statusCode === 404 && error.meta?.body?.error?.type === 'index_not_found_exception') {
-      console.log('Index not found, attempting to create documents index...');
-      try {
-        // Create a basic index with minimal mapping
-        await openSearchClient.indices.create({
-          index: 'documents',
-          body: {
-            mappings: {
-              properties: {
-                embedding: { type: 'float' }  // Use simple float instead of knn_vector
-              }
-            }
-          }
-        });
-        
-        // Try again with the simplified index
-        await openSearchClient.index({
-          index: 'documents',
-          id: document.id,
-          body: document,
-          refresh: true
-        });
-        
-        console.log(`Document ${document.id} indexed successfully after creating simplified index`);
-      } catch (createError) {
-        console.error('Failed to create index and index document:', createError);
-      }
-    }
-    
-    // Try the direct HTTP approach as a fallback
-    console.log('Trying direct HTTP approach as a fallback...');
-    await directOpenSearchIndex(document);
-  }
 }
 
 // Process DynamoDB stream records

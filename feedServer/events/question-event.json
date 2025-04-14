@@ -1,0 +1,39 @@
+{
+  "body": "{\"question\":\"What is the knowledge base API?\"}",
+  "resource": "/question",
+  "path": "/question",
+  "httpMethod": "POST",
+  "isBase64Encoded": false,
+  "queryStringParameters": {},
+  "multiValueQueryStringParameters": {},
+  "pathParameters": {},
+  "stageVariables": {},
+  "headers": {
+    "Accept": "application/json",
+    "Content-Type": "application/json"
+  },
+  "requestContext": {
+    "accountId": "123456789012",
+    "resourceId": "abcdef",
+    "stage": "dev",
+    "requestId": "request-id",
+    "identity": {
+      "cognitoIdentityPoolId": null,
+      "accountId": null,
+      "cognitoIdentityId": null,
+      "caller": null,
+      "sourceIp": "127.0.0.1",
+      "principalOrgId": null,
+      "accessKey": null,
+      "cognitoAuthenticationType": null,
+      "cognitoAuthenticationProvider": null,
+      "userArn": null,
+      "userAgent": "PostmanRuntime/7.29.0",
+      "user": null
+    },
+    "domainName": "localhost",
+    "resourcePath": "/question",
+    "httpMethod": "POST",
+    "apiId": "api-id"
+  }
+} 

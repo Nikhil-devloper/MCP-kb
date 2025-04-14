@@ -83,6 +83,12 @@
         "LogGroupName": "/aws/lambda/knowledge-base-api-dev-documentIngestion"
       }
     },
+    "QuestionProcessorLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/knowledge-base-api-dev-questionProcessor"
+      }
+    },
     "IamRoleLambdaExecution": {
       "Type": "AWS::IAM::Role",
       "Properties": {
@@ -264,7 +270,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/knowledge-base-api/dev/1744638121357-2025-04-14T13:42:01.357Z/api.zip"
+          "S3Key": "serverless/knowledge-base-api/dev/1744645459597-2025-04-14T15:44:19.597Z/api.zip"
         },
         "Handler": "dist/handler.handler",
         "Runtime": "nodejs18.x",
@@ -296,7 +302,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/knowledge-base-api/dev/1744638121357-2025-04-14T13:42:01.357Z/documentIngestion.zip"
+          "S3Key": "serverless/knowledge-base-api/dev/1744645459597-2025-04-14T15:44:19.597Z/documentIngestion.zip"
         },
         "Handler": "dist/lambdas/documentIngestion.handler",
         "Runtime": "nodejs18.x",
@@ -321,24 +327,66 @@
         "DocumentIngestionLogGroup"
       ]
     },
-    "ApiLambdaVersionZ0KK7wCviF8nLd6vKAWsTJu3b2kUy01VqUZlC8gIY": {
+    "QuestionProcessorLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/knowledge-base-api/dev/1744645459597-2025-04-14T15:44:19.597Z/questionProcessor.zip"
+        },
+        "Handler": "dist/lambdas/questionProcessor.handler",
+        "Runtime": "nodejs18.x",
+        "FunctionName": "knowledge-base-api-dev-questionProcessor",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Environment": {
+          "Variables": {
+            "DOCUMENTS_TABLE": "knowledge-base-api-dev-documents",
+            "OPENSEARCH_DOMAIN_ENDPOINT": "https://search-knowledgebase-search-new-ehotyrromqfzkijvbsnf3kzini.aos.ap-south-1.on.aws",
+            "OPENSEARCH_ENABLED": "true"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "QuestionProcessorLogGroup"
+      ]
+    },
+    "ApiLambdaVersionsU60ieVVDGUr1hAJ4PCbNDmciEzv9svS7CdgIEuzJPA": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "ApiLambdaFunction"
         },
-        "CodeSha256": "4PE1SWY0UegiTHS5enAfaQ853HnMa8/oXCTRLYmgTRs="
+        "CodeSha256": "CuWU8gWgtd829jJC7EYqL7cCgizB/EAmhyV7vMmMYcI="
       }
     },
-    "DocumentIngestionLambdaVersionSonslGQJI09wofUo2rywJcTFy5UDzlzgJDp28NtNY": {
+    "DocumentIngestionLambdaVersionU9L3VkgOwL2H0I6IrFutzJT4obahRpR1O4ZRDgNuMxU": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "DocumentIngestionLambdaFunction"
         },
-        "CodeSha256": "4PE1SWY0UegiTHS5enAfaQ853HnMa8/oXCTRLYmgTRs="
+        "CodeSha256": "CuWU8gWgtd829jJC7EYqL7cCgizB/EAmhyV7vMmMYcI="
+      }
+    },
+    "QuestionProcessorLambdaVersionM5cCDgQCsLF5wyk1KYakgetXDI2ppuTvQmN0r5ukY": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "QuestionProcessorLambdaFunction"
+        },
+        "CodeSha256": "CuWU8gWgtd829jJC7EYqL7cCgizB/EAmhyV7vMmMYcI="
       }
     },
     "ApiGatewayRestApi": {
@@ -363,6 +411,21 @@
           ]
         },
         "PathPart": "{proxy+}",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
+    },
+    "ApiGatewayResourceQuestion": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "ApiGatewayRestApi",
+            "RootResourceId"
+          ]
+        },
+        "PathPart": "question",
         "RestApiId": {
           "Ref": "ApiGatewayRestApi"
         }
@@ -455,6 +518,51 @@
         },
         "ResourceId": {
           "Ref": "ApiGatewayResourceProxyVar"
+        },
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
+    },
+    "ApiGatewayMethodQuestionOptions": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "OPTIONS",
+        "MethodResponses": [
+          {
+            "StatusCode": "200",
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": true,
+              "method.response.header.Access-Control-Allow-Headers": true,
+              "method.response.header.Access-Control-Allow-Methods": true
+            },
+            "ResponseModels": {}
+          }
+        ],
+        "RequestParameters": {},
+        "Integration": {
+          "Type": "MOCK",
+          "RequestTemplates": {
+            "application/json": "{statusCode:200}"
+          },
+          "ContentHandling": "CONVERT_TO_TEXT",
+          "IntegrationResponses": [
+            {
+              "StatusCode": "200",
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST'"
+              },
+              "ResponseTemplates": {
+                "application/json": ""
+              }
+            }
+          ]
+        },
+        "ResourceId": {
+          "Ref": "ApiGatewayResourceQuestion"
         },
         "RestApiId": {
           "Ref": "ApiGatewayRestApi"
@@ -556,7 +664,53 @@
         "ApiLambdaPermissionApiGateway"
       ]
     },
-    "ApiGatewayDeployment1744638112588": {
+    "ApiGatewayMethodQuestionPost": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "HttpMethod": "POST",
+        "RequestParameters": {},
+        "ResourceId": {
+          "Ref": "ApiGatewayResourceQuestion"
+        },
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        },
+        "ApiKeyRequired": false,
+        "AuthorizationType": "NONE",
+        "Integration": {
+          "IntegrationHttpMethod": "POST",
+          "Type": "AWS_PROXY",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":apigateway:",
+                {
+                  "Ref": "AWS::Region"
+                },
+                ":lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "QuestionProcessorLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          }
+        },
+        "MethodResponses": []
+      },
+      "DependsOn": [
+        "QuestionProcessorLambdaPermissionApiGateway"
+      ]
+    },
+    "ApiGatewayDeployment1744645447684": {
       "Type": "AWS::ApiGateway::Deployment",
       "Properties": {
         "RestApiId": {
@@ -567,8 +721,10 @@
       "DependsOn": [
         "ApiGatewayMethodOptions",
         "ApiGatewayMethodProxyVarOptions",
+        "ApiGatewayMethodQuestionOptions",
         "ApiGatewayMethodAny",
-        "ApiGatewayMethodProxyVarAny"
+        "ApiGatewayMethodProxyVarAny",
+        "ApiGatewayMethodQuestionPost"
       ]
     },
     "ApiLambdaPermissionApiGateway": {
@@ -577,6 +733,43 @@
         "FunctionName": {
           "Fn::GetAtt": [
             "ApiLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition"
+              },
+              ":execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "/*/*"
+            ]
+          ]
+        }
+      }
+    },
+    "QuestionProcessorLambdaPermissionApiGateway": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "QuestionProcessorLambdaFunction",
             "Arn"
           ]
         },
@@ -666,7 +859,7 @@
     "ApiLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "ApiLambdaVersionZ0KK7wCviF8nLd6vKAWsTJu3b2kUy01VqUZlC8gIY"
+        "Ref": "ApiLambdaVersionsU60ieVVDGUr1hAJ4PCbNDmciEzv9svS7CdgIEuzJPA"
       },
       "Export": {
         "Name": "sls-knowledge-base-api-dev-ApiLambdaFunctionQualifiedArn"
@@ -675,10 +868,19 @@
     "DocumentIngestionLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "DocumentIngestionLambdaVersionSonslGQJI09wofUo2rywJcTFy5UDzlzgJDp28NtNY"
+        "Ref": "DocumentIngestionLambdaVersionU9L3VkgOwL2H0I6IrFutzJT4obahRpR1O4ZRDgNuMxU"
       },
       "Export": {
         "Name": "sls-knowledge-base-api-dev-DocumentIngestionLambdaFunctionQualifiedArn"
+      }
+    },
+    "QuestionProcessorLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "QuestionProcessorLambdaVersionM5cCDgQCsLF5wyk1KYakgetXDI2ppuTvQmN0r5ukY"
+      },
+      "Export": {
+        "Name": "sls-knowledge-base-api-dev-QuestionProcessorLambdaFunctionQualifiedArn"
       }
     },
     "ServiceEndpoint": {

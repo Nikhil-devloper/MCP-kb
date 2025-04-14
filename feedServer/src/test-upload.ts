@@ -18,42 +18,53 @@ if (!fs.existsSync(SAMPLE_DIR)) {
 
 // Create a sample markdown file with the unique marker
 const sampleFilePath = path.join(SAMPLE_DIR, `sample-${uniqueId}.md`);
-const sampleContent = `# Test Document with ID: ${uniqueId}
+const sampleContent = `# Knowledge Base API Documentation
 
-This is a special test document containing the unique search term: ${uniqueSearchTerm}
+## What is the Knowledge Base API?
 
-## Features
+The Knowledge Base API is a serverless application that provides document storage and semantic search capabilities. It is built using AWS services including Lambda, DynamoDB, API Gateway, and OpenSearch. The API enables users to upload, retrieve, and search documents with vector-based semantic search.
 
-- Automatic embedding generation
-- OpenSearch integration
-- Vector search capabilities
-- Unique identifier: ${uniqueId}
-  
+This document contains the unique search term: ${uniqueSearchTerm}
+
+## Key Features
+
+- Document storage in DynamoDB with JSON metadata
+- Automatic embedding generation using Amazon Bedrock's Titan model
+- Vector search capabilities using OpenSearch
+- REST API for document CRUD operations
+- Semantic search to find relevant information based on meaning, not just keywords
+
+## System Architecture
+
+The Knowledge Base API consists of several components:
+
+1. **API Gateway**: Handles HTTP requests for document operations
+2. **DynamoDB**: Stores document metadata and content
+3. **Lambda Functions**:
+   - Document ingestion: Processes new documents and generates embeddings
+   - Question processor: Handles semantic search by embedding questions and finding similar documents
+4. **Amazon Bedrock**: Generates embeddings for text using the Titan model
+5. **OpenSearch**: Stores document embeddings and provides vector search capabilities
+
 ## How it works
 
-When this document is uploaded to the API, a Lambda function will:
-1. Extract the text content
-2. Generate embeddings using Amazon Bedrock's Titan model
-3. Store the document and its embedding in OpenSearch
+When a document is uploaded to the API:
+1. The document is stored in DynamoDB
+2. DynamoDB streams trigger the documentIngestion Lambda
+3. The Lambda generates embeddings with Bedrock
+4. The document with embeddings is stored in OpenSearch
 
-This enables semantic search capabilities!
+When a question is asked:
+1. The question processor Lambda generates an embedding for the question
+2. It searches OpenSearch for documents with similar embeddings
+3. The most relevant documents are returned as context
+4. An LLM can then generate an answer based on this context
 
 ## OpenSearch Testing Instructions
 
-After uploading this document, go to the OpenSearch Dashboard and run:
+After uploading this document, you can test the vector search capabilities by asking questions about the Knowledge Base API.
 
-\`\`\`
-GET documents/_search
-{
-  "query": {
-    "match_phrase": {
-      "content": "${uniqueSearchTerm}"
-    }
-  }
-}
-\`\`\`
-
-You should see this document in the results!
+Unique identifier: ${uniqueId}
 `;
 
 fs.writeFileSync(sampleFilePath, sampleContent);
@@ -65,8 +76,8 @@ async function uploadDocument() {
     // Create form data with the file and metadata
     const form = new FormData();
     form.append('file', fs.createReadStream(sampleFilePath));
-    form.append('title', `Test Document ${uniqueId}`);
-    form.append('tags', `test,embedding,bedrock,${uniqueId}`);
+    form.append('title', `Knowledge Base API Documentation`);
+    form.append('tags', `documentation,api,knowledge-base,vector-search,${uniqueId}`);
     
     console.log('Uploading document to API...');
     
@@ -84,6 +95,16 @@ async function uploadDocument() {
     console.log('2. DynamoDB streams trigger the documentIngestion Lambda');
     console.log('3. The Lambda generates embeddings with Bedrock');
     console.log('4. The document with embeddings is stored in OpenSearch');
+    
+    // Now test the question processor
+    console.log('\nTesting question processor with a sample question...');
+    const questionResponse = await axios.post('https://fedavetw0i.execute-api.ap-south-1.amazonaws.com/dev/question', {
+      question: "What is the knowledge base API?"
+    });
+    
+    console.log('\nQuestion processor response:');
+    console.log(JSON.stringify(questionResponse.data, null, 2));
+    
     console.log('\nTo verify in OpenSearch Dashboard:');
     console.log(`
 GET documents/_search
@@ -97,7 +118,7 @@ GET documents/_search
 `);
     console.log('\nCheck the Lambda logs for details in CloudWatch');
   } catch (error: any) {
-    console.error('Error uploading document:');
+    console.error('Error:');
     if (error.response) {
       console.error('API Response:', error.response.status, error.response.data);
     } else {

@@ -1,3 +1,91 @@
+# Knowledge Base with Vector Search
+
+This project implements a knowledge base system with vector search capabilities using AWS services:
+
+## Architecture
+
+The system consists of two main Lambda functions:
+
+1. **Document Ingestion Lambda**: Processes new documents from DynamoDB streams, generates embeddings using Bedrock's Titan model, and stores the documents with their embeddings in OpenSearch.
+
+2. **Question Processing Lambda**: Takes a user question, generates an embedding for it using Bedrock's Titan model, and searches OpenSearch for the most relevant documents using vector similarity.
+
+## Components
+
+- **DynamoDB**: Stores the documents with their metadata.
+- **OpenSearch**: Stores the document embeddings and supports vector similarity search.
+- **Bedrock**: Generates embeddings for documents and questions using the Titan model.
+- **Lambda Functions**: Process documents and questions, generate embeddings, and perform searches.
+- **API Gateway**: Provides HTTP endpoints for interacting with the system.
+
+## API Endpoints
+
+- `POST /question`: Takes a question in the request body and returns the most relevant documents.
+  ```json
+  {
+    "question": "What is the knowledge base API?"
+  }
+  ```
+
+## Deployment
+
+The system can be deployed using AWS SAM:
+
+```bash
+# Install dependencies
+npm install
+
+# Build the TypeScript code
+npm run build
+
+# Deploy the SAM template
+sam deploy --guided
+```
+
+## Local Development
+
+For local development, you can run the SAM template locally:
+
+```bash
+# Start the local API
+sam local start-api
+
+# Invoke a lambda function locally
+sam local invoke QuestionProcessorFunction --event events/question-event.json
+```
+
+## Environment Variables
+
+- `OPENSEARCH_ENABLED`: Set to 'true' to enable OpenSearch integration.
+- `OPENSEARCH_DOMAIN_ENDPOINT`: URL of your OpenSearch domain.
+- `AWS_REGION`: AWS region for services (default: 'ap-south-1').
+
+## Implementation Details
+
+### Document Ingestion
+
+When a new document is added to DynamoDB:
+1. The document ingestion Lambda is triggered by the DynamoDB stream.
+2. It extracts the document content and generates an embedding using Bedrock.
+3. It stores the document with its embedding in OpenSearch.
+
+### Question Processing
+
+When a user asks a question:
+1. The question is sent to the question processor Lambda.
+2. The Lambda generates an embedding for the question using Bedrock.
+3. It performs a vector similarity search in OpenSearch to find the most relevant documents.
+4. It returns the relevant documents to the user.
+
+### Enhanced Query Tool
+
+The enhanced query tool in the MCP system:
+1. Takes a user question.
+2. Calls the question processor Lambda to get relevant documents.
+3. Prepares a context from the relevant documents.
+4. Calls an LLM to generate an answer based on the question and context.
+5. Returns the answer to the user.
+
 # Knowledge Base API
 
 A serverless API for managing a knowledge base of documents. Built with Node.js, TypeScript, Express, and AWS DynamoDB.

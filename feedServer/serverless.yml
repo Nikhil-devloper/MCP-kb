@@ -95,6 +95,19 @@ functions:
           batchSize: 10
           startingPosition: LATEST
           enabled: true
+          
+  questionProcessor:
+    handler: dist/lambdas/questionProcessor.handler
+    package:
+      patterns:
+        - '!**'
+        - 'dist/**'
+        - 'node_modules/**'
+    events:
+      - http:
+          path: /question
+          method: post
+          cors: true
 
 resources:
   Resources:
